@@ -109,6 +109,12 @@ connection.  Reprioritizing each stream as a tab/client's overall priority
 changes (e.g.  changing the foreground tab) is clunky.
             </t>
           </x:lt>
+          <x:lt hangText="Server Push">
+            <t>
+              <vspace blankLines="0"/>
+No single fixed priority is appropriate for server push. A stream pushing a large image, for example, should have lower priority than JS/CSS. But, when pushing JS/CSS that the browser needs, those streams should have high priority. Even within specific resource types, certain resources may have different priorities that may only be discovered during rendering. For example, sometimes JS/CSS blocks rendering and sometimes it does not. It may be prohibitively expensive, not to mention inaccurate, for the server to do rendering to model the client's behavior in order to more accurately prioritize server push resources. Therefore, it may be beneficial for the client to inform the server of correct prioritization.
+            </t>
+          </x:lt>
         </list>
       </t>
     </section>
@@ -133,10 +139,9 @@ the HEADERS frames and in PRIORITY frames.  To allow servers to advertise their
 support for scheduling transfers based on dependencies, we propose a new
 SETTINGS id/value pair. We describe the layout and semantics of each in
 turn.</t>
-    </section>
-    <section anchor="headers" title="HEADERS frame">
-      <figure title="HEADERS Frame Payload">
-        <artwork type="inline"><![CDATA[
+      <section anchor="headers" title="HEADERS frame">
+        <figure title="HEADERS Frame Payload">
+          <artwork type="inline"><![CDATA[
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -144,22 +149,21 @@ turn.</t>
  +-+-------------------------------------------------------------+
  |                   Header Block Fragment (*)                 ...
  +---------------------------------------------------------------+
-]]></artwork>
-      </figure>
-      <t>Here, the 4 octets previously used by the unused bit and 31 bit
+]]></artwork></figure>
+        <t>Here, the 4 octets previously used by the unused bit and 31 bit
 Priority field in the HEADERS frame are reinterpreted. The unused bit is now
 known as the P bit, and the 31 bit Priority field is now PriOrDep.</t>
 
-      <t>P: A bit indicating whether the following PriOrDep bits specify a
+        <t>P: A bit indicating whether the following PriOrDep bits specify a
 priority (P = 1) or a stream ID (P = 0) on which this new stream depends.</t>
 
-      <t>PriOrDep: Depending on the value of P, either the priority of the new
+        <t>PriOrDep: Depending on the value of P, either the priority of the new
 stream or a stream ID on which this new stream depends.</t>
 
-      <t>The structure and semantics of the Header Block Fragment are
+        <t>The structure and semantics of the Header Block Fragment are
 unchanged.</t>
 
-      <t>P is exclusive; a stream may be assigned a priority or a parent
+        <t>P is exclusive; a stream may be assigned a priority or a parent
 dependency upon creation, but not both. There are no constraints on the value
 of PriOrDep; any 31 bit value is valid. Thus, a stream may refer to a
 dependency identifier that does not correspond to any current or previous
@@ -167,32 +171,31 @@ stream ID. This is a deliberate design choice that increases flexibility for
 clients when structuring dependencies, a topic we expand upon in the <xref
 target="policies">policies section.</xref></t>
 
-      <t>Server push streams are assigned an initial parent at the discretion
+        <t>Server push streams are assigned an initial parent at the discretion
 of the server. A conformant implementation SHOULD create a dependency on the
 Stream Identifier indicated in the PUSH_PROMISE frame.</t>
-    </section>
-    <section anchor="priority" title="PRIORITY frame">
-      <figure title="PRIORITY Frame Payload">
-        <artwork type="inline"><![CDATA[
+      </section>
+      <section anchor="priority" title="PRIORITY frame">
+        <figure title="PRIORITY Frame Payload">
+          <artwork type="inline"><![CDATA[
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |P|                        PriOrDep (31)                        |
  +-+-------------------------------------------------------------+
-]]></artwork>
-      </figure>
-      <t>As in HEADERS, the Priority field is changed to be a P/PriOrDep field
-indicating an update to the 31 bit Dependency Id specified in the header. We
-relabel the typical Stream Id here as Dependency Id since a dependency need not
-correspond to an actual stream. (Recall that any 31 bit value is a valid
+]]></artwork></figure>
+        <t>As in HEADERS, the Priority field is changed to be a P/PriOrDep
+field indicating an update to the 31 bit Dependency Id specified in the header.
+We relabel the typical Stream Id here as Dependency Id since a dependency need
+not correspond to an actual stream. (Recall that any 31 bit value is a valid
 dependency identifier.)</t>
 
-      <t>To support batched updates of dependencies, an optional list of
+        <t>To support batched updates of dependencies, an optional list of
 DependencyPriOrDep pairs with identical semantics may follow. The number of
 such pairs is determined by examining the frame length.</t>
 
-      <figure title="DependencyPriOrDep">
-        <artwork type="inline"><![CDATA[
+        <figure title="DependencyPriOrDep">
+          <artwork type="inline"><![CDATA[
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -200,45 +203,47 @@ such pairs is determined by examining the frame length.</t>
  +---------------------------------------------------------------+
  |P|                        PriOrDep (31)                        |
  +-+-------------------------------------------------------------+
-]]></artwork>
-      </figure>
-      <t>We expect most streams to have at most a single dependency, but this
+]]></artwork></figure>
+        <t>We expect most streams to have at most a single dependency, but this
 is not a protocol requirement. (Later, we describe scenarios where multiple
 parents may improve efficiency.) If a stream is referenced more than once in a
 single frame, this indicates multiple parents. A server implementation which
 does not support multiple parents MUST use the last referenced parent. Clients
 which send multiple parents thus SHOULD put the most important parent last.</t>
-    </section>
-    <section anchor="settings" title="SETTINGS">
-      <t>Recall that dependencies and priorities are advisory. While servers
+      </section>
+      <section anchor="settings" title="SETTINGS">
+        <t>Recall that dependencies and priorities are advisory. While servers
 must accept the messages, they are not required to incorporate them into
 scheduling decisions. A client may benefit from knowing a server's level of
 support; e.g., a client may specify priorities only if it knows a server will
 ignore dependencies. To communicate this, we propose new SETTINGS IDs:
-        <list style="hanging">
-          <x:lt hangText="SETTINGS_MAX_CONCURRENT_DEPENDENCY_SCHEDULING_NODES (11):" anchor="max_scheduling_nodes">
-	    <t>Allows the server to indicate resource limits for dependency
+          <list style="hanging">
+            <x:lt hangText="SETTINGS_MAX_CONCURRENT_DEPENDENCY_SCHEDULING_NODES
+(11):" anchor="max_scheduling_nodes">
+              <t>Allows the server to indicate resource limits for dependency
 scheduling, e.g., to limit memory consumption. A value of 0 indicates that the
 server does not support dependency scheduling. (We expect most implementations
 will select a value greater than or equal to MAX_CONCURRENT_STREAMS.)</t>
-          </x:lt>
-          <x:lt hangText="SETTINGS_DEPENDENCY_SCHEDULING_NODE_TIMEOUT (12):" anchor="scheduling_timeout">
-	    <t>Indicates how long the server will maintain dependency nodes
+            </x:lt>
+            <x:lt hangText="SETTINGS_DEPENDENCY_SCHEDULING_NODE_TIMEOUT (12):"
+anchor="scheduling_timeout">
+              <t>Indicates how long the server will maintain dependency nodes
 after creation. The value is an interval in milliseconds. This allows the
 client to estimate if previously created dependency relationships are still
 available for reference at the server. (We expect conformant implementations to
 maintain dependencies for at least as long as associated streams are active,
 although this is not a correctness requirement.)</t>
-          </x:lt>
-        </list>
-      </t>
-      <t>Both of these values are advisory. Servers need not abide by their
+            </x:lt>
+          </list>
+        </t>
+        <t>Both of these values are advisory. Servers need not abide by their
 stated values and clients may disregard them. Conformant clients should respect
 the concurrency limit, but servers must be robust to a client that exceeds it.
 Similarly, servers may drop dependency information at any time regardless of
 previous statements made in SETTINGS. This is intended to provide flexibility
 for service policies; e.g., a server may reduce the timeout in response to
 memory pressure or abandon dependency scheduling entirely.</t>
+      </section>
     </section>
     <section anchor="examples" title="Examples">
       <t>The combination of dependencies and priorities suffices to express
@@ -247,13 +252,13 @@ describe below.) But, how should the browser choose dependencies and priorities
 when making requests? This question is best answered quantitatively, but as a
 starting point, we consider the following policy in our examples:
         <list style="numbers">
-	  <t>Resource dependencies are (re)configured to reflect
+          <t>Resource dependencies are (re)configured to reflect
 parser-blocking order. The transfer of non-streaming resources is always
 serialized; i.e., non-async scripts and styling.</t>
-	  <t>Resources that can be progressively rendered (e.g., images) are
+          <t>Resources that can be progressively rendered (e.g., images) are
 transferred concurrently and (re)configured to depend on parser-blocking
 resource transfers.</t>
-	  <t>To ensure that the speculative parser can maintain enough
+          <t>To ensure that the speculative parser can maintain enough
 in-flight requests to fill pipe between the client and server, page HTML is
 always a top-level dependency, although it may have lower priority than a
 resource transfer currently blocking document parsing.</t>
@@ -265,7 +270,7 @@ streams with the same parent.</t>
       <t>Concretely, suppose a HTTP/2 connection is multiplexing multiple tabs
 from a user connected to a HTTP/2 proxy, with parent pointers and priorities as
 shown below. (P6, for example, indicates a priority of 6.)</t>
-      <figure title="Multiple Tab Example">
+      <figure anchor="multiple_tab_example" title="Multiple Tab Example">
         <artwork type="inline"><![CDATA[
   +----------------+                +----------------+
   |                |                |                |
@@ -312,16 +317,13 @@ a high delay path, a small HTML transfer may be flushed entirely by the server
 before the client receives any data and begins making dependent requests for
 resources embedded in the page.</t>
       <t>With these client and server policies in mind, we revisit the
-motivating use-cases described above in greater detail.
-        <list style="symbols">
-          <t>Specifying an ordering of resource transfers</t>
-          <t>Reacting to document parsing</t>
-        </list>
-      </t>
-      <t>We illustrate the need for both serial dependencies, concurrency, and
-reprioritization in these cases with a simple example.</t>
-      <t>Suppose site.com has index.htm:</t>
-      <figure><artwork><![CDATA[
+motivating use-cases described above in greater detail.</t>
+      <section anchor="specifying_reacting" title="Specifying an ordering of
+resource transfers and reacting to document parsing">
+        <t>We illustrate the need for both serial dependencies, concurrency,
+and reprioritization in these cases with a simple example.</t>
+        <t>Suppose site.com has index.htm:</t>
+          <figure><artwork><![CDATA[
 <html>
 <body>
 <script src="a.js"></script>
@@ -330,27 +332,27 @@ reprioritization in these cases with a simple example.</t>
 <link rel="stylesheet" type="text/css" href="style.css">
 </body>
 ]]></artwork></figure>
-      <t>with a.js:</t>
-      <figure><artwork><![CDATA[
+        <t>with a.js:</t>
+        <figure><artwork><![CDATA[
 document.write('<script src="b.js"></script>');
 ]]></artwork></figure>
-      <t>b.js:</t>
-      <figure><artwork><![CDATA[
+        <t>b.js:</t>
+        <figure><artwork><![CDATA[
 document.write('<div>blocker</div>');
 ]]></artwork></figure>
-      <t>and style.css:</t>
-      <figure><artwork><![CDATA[
+        <t>and style.css:</t>
+        <figure><artwork><![CDATA[
 div {
   border: 1px solid #000;
 }
 ]]></artwork></figure>
-      <t>How would this example page be transferred today? As the main HTML is
-received and parsed, a request for a.js will be issued and block the document
-parser. As the remaining HTML streams in, the speculative parser will issue
-requests for a.jpg, b.jpg, and style.css in quick succession. Once a.js is
-received and executed, a request for b.js will be issued, which again blocks
+        <t>How would this example page be transferred today? As the main HTML
+is received and parsed, a request for a.js will be issued and block the
+document parser. As the remaining HTML streams in, the speculative parser will
+issue requests for a.jpg, b.jpg, and style.css in quick succession. Once a.js
+is received and executed, a request for b.js will be issued, which again blocks
 parsing until received. Visually:</t>
-      <figure><artwork><![CDATA[
+        <figure><artwork><![CDATA[
 Client               Server
   +                     +
   |+ GET index.htm      |
@@ -380,6 +382,89 @@ Client               Server
   |                     |
   v                     v
 ]]></artwork></figure>
+        <t>This transfer schedule is suboptimal. Page rendering will complete
+only when style.css and b.js have completed, but receiving each of those
+critical resources is slowed by competition for bandwidth capacity with bulk
+data that's not on the critical path (a.jpg and b.jpg).</t>
+
+        <t>What we would like is serialized transfer that reflects the document
+parse order with concurrency for nonblocking, streaming resources. More
+specifically, we want to receive: 1) index.html, 2) a.js, 3) b.js, and 4)
+style.css serialized (i.e., with no deliberate sharing of capacity among the
+ordered transfers). After those critical transfers have completed, a.jpg and
+b.jpg should be transferred concurrently (as they may be displayed
+progressively.)</t>
+
+        <t>Folding in the protocol mechanisms described above:</t>
+
+        <t>TODO: insert figure</t>
+
+        <t>In the figure, each resource request corresponds to a new stream with
+the form ID: request (PriOrDep). In more detail:
+
+          <list style="symbols">
+            <t>The SYN_STREAM for the index.htm request has a parent indicating
+a default priority (3) and a stream id of 1.</t>
+
+            <t>The document parser is blocked once the external script a.js is
+parsed. At this point, the speculative  parser looks ahead and creates new
+streams for a.jpg, b.jpg in parse order. a.jpg and b.jpg can be progressively
+rendered, so their transfer is concurrent (same parent, 2, corresponding to
+a.js).</t>
+
+            <t>When the parser encounters style.css, back-to-back control
+frames are sent to create the stream and update the dependencies of the image
+transfers. Since stylesheets block rendering and cannot be streamed, the image
+transfers are updated to depend on style.css (P5).</t>
+
+            <t>Once a.js completes, the document parser continues, executing
+a.js and inserting b.js via document.write(), again blocking document parsing
+on the receipt of b.js. At this point, b.js should preempt all other transfers
+since it's a non-streaming resource that is blocking page rendering. To this
+end, the client creates the b.js stream with a.js as its parent (or,
+equivalently, index.htm). Batched with this HEADERS is another PRIORITY frame
+rewiring style.css to depend on b.js. This serializes the transfers (modulo the
+delay associated with frame propagation and any transfer buffering delay at the
+server).</t>
+          </list>
+        </t>
+        <t>This transfer schedule may significantly improve performance. By
+serializing the transfer of resources on the critical path, the browser can
+ensure that resources needed immediately do not compete for bandwidth capacity
+with less important transfers. Yet, the pipe remains full, as a queue of
+requests is maintained in the scheduling tree ready to fill any idle capacity
+with useful data. Where we cannot make an informed scheduling decision, we
+hedge our bets with concurrent transfers by hinting that they are peers and
+letting the server decide what makes the most sense --- as in the case of two
+above the fold images that can be rendered progressively.</t>
+
+        <t>Note that this sort of explicit scheduler hinting is not possible in
+HTTP today. Requests, once issued, cannot be reprioritized or reordered on a
+single connection. This results in suboptimal transfer schedules given the
+limitations of HTML lookahead scanning. Yet, lookahead is essential for
+ensuring the concurrency necessary to keep the client &lt;-&gt; server pipe full.
+While the browser might serialize transfers itself, the many small transfers
+typical of pageloads would significantly limit utilization. With ordering and
+reprioritization in HTTP/2, browsers can jointly optimize both the transfer
+pipeline and resource priority as desired, rather than being forced to accept
+poor utilization or poor transfer schedules.</t>
+
+      </section>
+      <section anchor="multiple_users_single_session" title="Servicing multiple
+tabs/users over a single SPDY session">
+        <t>As an illustration of this case, recall the <xref
+target="multiple_tab_example">example</xref> from our straw-man design.</t>
+        <t>Suppose concurrent tabs are loading with a scheduling forest as
+shown. When a user changes tabs, the browser simple sends a PRIORITY for the
+stream associated with tab2.htm to, say, priority 8. (A batched message might
+also reduce the priority of tab1.htm to weight 3.) Because bandwidth allocation
+decisions are made tree-by-tree and level-by-level, increasing the priority of
+tab2.htm effectively shifts capacity for all resource transfers depending on
+tab1.htm to tab2.htm.</t>
+      </section>
+      <section anchor="server_push" title="Server Push">
+        <t>As in client HEADERS messages, server push messages indicate the priority and dependencies of a resource as chosen by the server. Much like the client, the server is free to adopt prioritization policies to improve performance, e.g., by prioritizing pushes of styles over images. But, as in our example above, the browser may update the server's choices as information about resources needed for parsing is learned. (Again, expressed via PRIORITY frames.)</t>
+      </section>
     </section>
     <section anchor="policies" title="Policies">
     </section>
